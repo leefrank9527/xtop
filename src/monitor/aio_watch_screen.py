@@ -53,6 +53,13 @@ async def input_listener(stop_event):
 
 
 async def aio_print_screen(args):
+    server_url = args.server_url
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{server_url}/api/version") as resp:
+            brainframe_os_version = await resp.json()
+
+    cpu_model = await  get_cpu_model_linux()
+
     # Create a stop event
     stop_event = asyncio.Event()
 
@@ -75,13 +82,6 @@ async def aio_print_screen(args):
 
     # Helper function to create the header
     async def get_header_renderable():
-        server_url = args.server_url
-        async with aiohttp.ClientSession() as session:
-            async with session.get(f"{server_url}/api/version") as resp:
-                brainframe_os_version = await resp.json()
-
-        cpu_model = await  get_cpu_model_linux()
-
         # 1. Get current time
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
