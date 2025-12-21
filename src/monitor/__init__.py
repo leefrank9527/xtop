@@ -1,6 +1,9 @@
 HISTORY_SIZE = 60
 
-BORDER_STYLE = "gray"
-HEADER_STYLE = "magenta"
+# BORDER_STYLE = "rgb(96,96,96)"
+BORDER_STYLE = "cyan"
+TICKS_COLOR = "cyan"
+# HEADER_STYLE = "magenta"
+HEADER_STYLE = "cyan"
 WHITE = "\033[37m"
 RESET = "\033[0m"

@@ -21,7 +21,7 @@ from rich.align import Align
 from monitor.aio_docker_stats import AioDockerStats
 from monitor.aio_fps_monitor import AioFpsMonitor
 from monitor.aio_system_usage import AioSystemUsage
-from monitor import BORDER_STYLE, HEADER_STYLE, WHITE, RESET
+from monitor import BORDER_STYLE, HEADER_STYLE, WHITE, RESET, TICKS_COLOR
 
 
 async def get_cpu_model_linux():
@@ -124,7 +124,7 @@ async def aio_print_screen(args):
     async def make_chart(width):
         plt.clf()  # Clear previous frame
         plt.clear_color()
-        plt.ticks_color(BORDER_STYLE)
+        plt.ticks_color(TICKS_COLOR)
 
         calc_width = width if width > 80 else 100
         plt.plot_size(calc_width, 25)
@@ -173,10 +173,10 @@ async def aio_print_screen(args):
                 dashboard_group = Group(
                     await get_header_renderable(),
                     Align.center(" "),
-                    Align.left("Basic Stats", style="none"),
+                    Align.left("Basic Stats", style="bold white"),
                     await get_stat_table(),
                     Align.center(" "),
-                    Align.left("Docker Container Stats", style="none"),
+                    Align.left("Docker Container Stats", style="bold white"),
                     await docker_monitor.stats_table(),
                     Align.center(" "),
                     layout,

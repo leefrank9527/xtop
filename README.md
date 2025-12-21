@@ -23,7 +23,8 @@ python3 -m twine upload --repository testpypi dist/*
 
 You can use pip to install your package and verify that it works. Create a virtual environment and install your package from TestPyPI:
 ```angular2html
-python3 -m pip install --index-url https://test.pypi.org/simple/ --no-deps example-package-YOUR-USERNAME-HERE
+python3 -m pip install --force-reinstall --index-url https://test.pypi.org/simple/ --no-deps xtop-cli
+<!--python3 -m pip install &#45;&#45;force-reinstall &#45;&#45;index-url https://test.pypi.org/simple/ xtop-cli-->
 ```
 
 Once tested, run Twine to upload all of the archives under dist. Now that you’re uploading the package in production, you don’t need to specify --repository; the package will upload to https://pypi.org/ by default.:
