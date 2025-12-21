@@ -1,0 +1,6 @@
+HISTORY_SIZE = 60
+
+BORDER_STYLE = "black"
+HEADER_STYLE = "magenta"
+WHITE = "\033[37m"
+RESET = "\033[0m"

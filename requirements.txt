@@ -1,0 +1,9 @@
+orjson~=3.11.5
+requests~=2.32.5
+#tabulate~=0.9.0
+psutil~=7.1.3
+plotext~=5.3.2
+rich~=14.2.0
+requests_unixsocket~=0.4.1
+aiohttp~=3.13.2
+twine~=6.2.0
