@@ -7,3 +7,4 @@ rich~=14.2.0
 requests_unixsocket~=0.4.1
 aiohttp~=3.13.2
 twine~=6.2.0
+docker~=7.1.0

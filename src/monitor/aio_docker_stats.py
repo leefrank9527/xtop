@@ -1,5 +1,6 @@
 import aiohttp
 import asyncio
+import docker
 import orjson
 from rich import box
 from rich.table import Table
@@ -43,7 +44,28 @@ def format_bytes(num):
     return f"{num:.1f}PiB"
 
 
-async def process_container(cid, name, stats):
+def get_cpu_limit(container_name):
+    client = docker.from_env()
+    container = client.containers.get(container_name)
+    host_config = container.attrs['HostConfig']
+
+    cpu_cores = None
+
+    # 1. Check NanoCpus
+    nano_cpus = host_config.get('NanoCpus', 0)
+    if nano_cpus > 0:
+        cpu_cores = nano_cpus / 1e9
+    # 2. Check Quota/Period (if NanoCpus is 0)
+    else:
+        quota = host_config.get('CpuQuota', 0)
+        period = host_config.get('CpuPeriod', 100000)
+        if quota > 0:
+            cpu_cores = quota / period
+
+    return cpu_cores
+
+
+async def process_container(cid, name, stats, cpu_cores):
     if not stats:
         return None
 
@@ -53,7 +75,7 @@ async def process_container(cid, name, stats):
 
     # 2. Extract CPU Limit (Online CPUs)
     # This usually represents the number of cores available to the container
-    online_cpus = stats.get("cpu_stats", {}).get("online_cpus", 1)
+    online_cpus = stats.get("cpu_stats", {}).get("online_cpus", 1) if cpu_cores is None else cpu_cores
 
     # Safe dictionary gets
     mem_stats = stats.get("memory_stats", {})
@@ -130,14 +152,13 @@ class AioDockerStats:
             containers_map = {}
             for c in containers:
                 name = c["Names"][0].lstrip("/")
-
                 containers_map[name] = True
                 if name in self.active_tasks:
                     continue
-
+                cpu_cores = get_cpu_limit(container_name=name)
                 cid = c["Id"]
                 self.active_tasks[name] = asyncio.create_task(
-                    self.stream_container_stats(cid, name)
+                    self.stream_container_stats(cid, name, cpu_cores)
                 )
 
             active_tasks_keys = list(self.active_tasks.keys())
@@ -152,7 +173,7 @@ class AioDockerStats:
         async with self.session.get("http://docker/containers/json") as resp:
             return await resp.json()
 
-    async def stream_container_stats(self, cid, name):
+    async def stream_container_stats(self, cid, name, cpu_cores):
         """Task that streams stats for a single container."""
         url = f"http://docker/containers/{cid}/stats?stream=true"
         try:
@@ -161,7 +182,7 @@ class AioDockerStats:
                     if not line: continue
                     stats = orjson.loads(line.decode())
                     # print(stats)
-                    self.stats_cache[name] = await  process_container(cid, name, stats)
+                    self.stats_cache[name] = await  process_container(cid, name, stats, cpu_cores)
         except asyncio.CancelledError:
             pass
         except Exception as ex:
