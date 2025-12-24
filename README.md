@@ -1,9 +1,9 @@
 # xtop
 A terminal monitor fos FPS, System Usage and Docker Stats
 
-Make sure to have the latest version of PyPA’s build installed:
+Make sure to have the latest version of PyPA’s build and Twine installed:
 ```angular2html
-python3 -m pip install --upgrade build
+python3 -m pip install --upgrade build twine
 ```
 
 Now run this command from the same directory where pyproject.toml is located:
@@ -11,12 +11,7 @@ Now run this command from the same directory where pyproject.toml is located:
 python3 -m build
 ```
 
-Install Twine:
-```angular2html
-python3 -m pip install --upgrade twine
-```
-
-Once installed twine, run Twine to upload all of the archives under dist:
+Run Twine to upload all of the archives under dist:
 ```angular2html
 python3 -m twine upload --repository testpypi dist/*
 ```
