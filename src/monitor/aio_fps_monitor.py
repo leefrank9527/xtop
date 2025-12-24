@@ -138,7 +138,7 @@ class AioFpsMonitor:
         # median, minimum, maximum, average
         return self.tot_stat.get_history_stat()
 
-    async def get_stat_table_throughout(self):
+    async def get_stat_table_latest(self):
         table = Table(
             box=box.SIMPLE_HEAD, show_edge=False, padding=(0, 1), collapse_padding=True, show_lines=True, expand=True,
             header_style=HEADER_STYLE,
@@ -147,6 +147,19 @@ class AioFpsMonitor:
 
         # Define columns
         table.add_column("LATEST", justify="center", style="white")
+
+        # Add the data row
+        table.add_row(f"{self.tot_stat.latest_committed_fps:.2f}")
+        return table
+
+    async def get_stat_table_throughout(self):
+        table = Table(
+            box=box.SIMPLE_HEAD, show_edge=False, padding=(0, 1), collapse_padding=True, show_lines=True, expand=True,
+            header_style=HEADER_STYLE,
+            border_style=BORDER_STYLE
+        )
+
+        # Define columns
         table.add_column("MED", justify="center", style="white")
         table.add_column("AVG", justify="center", style="white")
         table.add_column("MIN", justify="center", style="white")
@@ -155,8 +168,7 @@ class AioFpsMonitor:
         # Add the data row
 
         median, minimum, maximum, average = self.tot_stat.get_history_stat()
-        table.add_row(f"{self.tot_stat.latest_committed_fps:.2f}", f"{median:.2f}", f"{average:.2f}", f"{minimum:.2f}",
-                      f"{maximum:.2f}")
+        table.add_row(f"{median:.2f}", f"{average:.2f}", f"{minimum:.2f}", f"{maximum:.2f}")
         return table
 
     async def get_stat_table_streams(self):
@@ -167,7 +179,6 @@ class AioFpsMonitor:
         )
 
         # Define columns
-        table.add_column("SUM", justify="center", style="white")
         table.add_column("AVG", justify="center", style="white")
         table.add_column("MIN", justify="center", style="white")
         table.add_column("MAX", justify="center", style="white")
@@ -183,8 +194,7 @@ class AioFpsMonitor:
             maximum = max(streams_fps)
             average = fps / len(streams_fps)
 
-        table.add_row(f"{fps:.2f}", f"{average:.2f}", f"{minimum:.2f}", f"{maximum:.2f}")
-        # table.add_row(f"{average:.2f}", f"{minimum:.2f}", f"{maximum:.2f}")
+        table.add_row(f"{average:.2f}", f"{minimum:.2f}", f"{maximum:.2f}")
         return table
 
     async def get_detailed_streams_table(self):

@@ -81,7 +81,7 @@ async def aio_print_screen(args):
         await m.start()
 
     # Helper function to create the header
-    async def get_header_renderable():
+    async def render_top_header():
         # 1. Get current time
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -107,12 +107,14 @@ async def aio_print_screen(args):
                              border_style=BORDER_STYLE
                              )
         master_table.add_column("Metrics", justify="center", vertical="middle")
+        master_table.add_column("FPS", justify="center")
         master_table.add_column("FPS THROUGHOUT", justify="center")
         master_table.add_column("FPS STREAMS", justify="center")
         master_table.add_column("System", justify="center")
         master_table.add_column("Core Container", justify="center")
         master_table.add_row(
             Align("Value", vertical="middle", align="center"),
+            await fps_monitor.get_stat_table_latest(),
             await fps_monitor.get_stat_table_throughout(),
             await fps_monitor.get_stat_table_streams(),
             await system_monitor.get_stat_table(),
@@ -171,7 +173,7 @@ async def aio_print_screen(args):
                 layout["right"].update(await fps_monitor.get_detailed_streams_table())
 
                 dashboard_group = Group(
-                    await get_header_renderable(),
+                    await render_top_header(),
                     Align.center(" "),
                     Align.left("Basic Stats", style="bold white"),
                     await get_stat_table(),
@@ -184,7 +186,7 @@ async def aio_print_screen(args):
 
                 live.update(dashboard_group)
 
-                await asyncio.sleep(delay=0.5)
+                await asyncio.sleep(delay=1.0)
     finally:
         input_task.cancel()
         for m in monitors:
