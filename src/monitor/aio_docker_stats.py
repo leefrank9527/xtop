@@ -200,6 +200,7 @@ class AioDockerStats:
         net_io = core_row[7]
 
         rows = [(f"CPU: {cpu_count}", cpu_percent), (f"MEM: {mem_limitation}", f"{mem_percent} / {mem_usage}"), ("NET I/O", net_io)]
+        grid = None
         try:
             grid = create_kv_grid(title="Container[Core]", rows=rows)
         except Exception as ex:

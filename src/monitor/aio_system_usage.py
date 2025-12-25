@@ -4,10 +4,7 @@ from collections import deque
 
 import psutil
 
-from rich import box
-from rich.table import Table
-
-from monitor import BORDER_STYLE, HEADER_STYLE, HISTORY_SIZE, create_kv_grid
+from monitor import HISTORY_SIZE, create_kv_grid
 
 
 class AioSystemUsage:
@@ -129,28 +126,4 @@ class AioSystemUsage:
     async def get_stat_grid(self):
         cpu_content, mem_total_gb, mem_content, disk_total_gb, disk_content, net_content = await self.get_stat()
         rows = [(f"CPU: {self.cpu_count}C", cpu_content), (f"Mem: {mem_total_gb:.2f}GB", mem_content), (f"Disk: {disk_total_gb:.2f}GB", disk_content), ("Network(UP/Down)", net_content)]
-        return self.cpu_count,cpu_content, mem_total_gb, mem_content, create_kv_grid("System", rows)
-
-    async def get_stat_table(self):
-        cpu_content, mem_total_gb, mem_content, disk_total_gb, disk_content, net_content = await self.get_stat()
-
-        # Create Table
-        table = Table(
-            # box=box.ROUNDED,
-            box=box.SIMPLE_HEAD,
-            show_edge=False,
-            padding=(0, 1),
-            expand=True,
-            collapse_padding=True, show_lines=True,
-            title=None,
-            header_style=HEADER_STYLE,
-            border_style=BORDER_STYLE
-        )
-
-        table.add_column(f"CPU: {self.cpu_count}C", justify="left", style="white")
-        table.add_column(f"Mem: {mem_total_gb:.2f}GB", justify="left", style="white")
-        table.add_column(f"Disk: {disk_total_gb:.2f}GB", justify="left", style="white")
-        table.add_column("Network(UP/Down)", justify="left", style="white")
-
-        table.add_row(cpu_content, mem_content, disk_content, net_content)
-        return table
+        return self.cpu_count, cpu_content, mem_total_gb, mem_content, create_kv_grid("System", rows)

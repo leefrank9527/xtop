@@ -131,26 +131,6 @@ async def aio_print_screen(args):
             docker_core_grid,
         )
 
-        # master_table = Table(box=box.SQUARE, show_lines=True, expand=True,
-        #                      header_style=HEADER_STYLE,
-        #                      border_style=BORDER_STYLE
-        #                      )
-        # master_table.add_column("Metrics", justify="center", vertical="middle")
-        # master_table.add_column("FPS", justify="center")
-        # master_table.add_column("FPS THROUGHOUT", justify="center")
-        # master_table.add_column("FPS STREAMS", justify="center")
-        # master_table.add_column("System", justify="center")
-        # master_table.add_column("Core Container", justify="center")
-        # master_table.add_row(
-        #     Align("Value", vertical="middle", align="center"),
-        #     await fps_monitor.get_stat_table_latest(),
-        #     await fps_monitor.get_stat_table_throughout(),
-        #     await fps_monitor.get_stat_table_streams(),
-        #     await system_monitor.get_stat_table(),
-        #     await docker_monitor.basic_core_stats_table()
-        # )
-        #
-        # return master_table
         return group
 
     async def make_chart(width):
