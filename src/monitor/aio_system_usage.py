@@ -7,7 +7,7 @@ import psutil
 from rich import box
 from rich.table import Table
 
-from monitor import BORDER_STYLE, HEADER_STYLE, HISTORY_SIZE
+from monitor import BORDER_STYLE, HEADER_STYLE, HISTORY_SIZE, create_kv_grid
 
 
 class AioSystemUsage:
@@ -93,7 +93,7 @@ class AioSystemUsage:
         if not data: return 0, 0, 0
         return min(data), max(data), sum(data) / len(data)
 
-    async def get_stat_table(self):
+    async def get_stat(self):
         # CPU Stats
         cpu_min, cpu_max, cpu_avg = self.get_cpu_stat()
         load_1, load_5, load_15 = self.load_avg
@@ -112,6 +112,28 @@ class AioSystemUsage:
         net_sent = self._format_net_speed(self.net_sent_speed)
         net_recv = self._format_net_speed(self.net_recv_speed)
 
+        # CPU Content
+        # cpu_content = f"{self.cpu_pct:.2f}%/{load_1:.2f}, {load_5:.2f}, {load_15:.2f}"
+        cpu_content = f"{self.cpu_pct * self.cpu_count:.2f}%"
+
+        # Memory Content (GB + History Stats)
+        mem_percent = 0 if self.mem_info is None else self.mem_info.percent
+        mem_content = f"{mem_used_gb:.2f}GB/{mem_percent:.2f}%"
+
+        disk_content = f"{disk_pct:.2f}%/{disk_used_gb:.2f}GB"
+
+        net_content = f"{net_sent}/{net_recv}"
+
+        return cpu_content, mem_total_gb, mem_content, disk_total_gb, disk_content, net_content
+
+    async def get_stat_grid(self):
+        cpu_content, mem_total_gb, mem_content, disk_total_gb, disk_content, net_content = await self.get_stat()
+        rows = [(f"CPU: {self.cpu_count}C", cpu_content), (f"Mem: {mem_total_gb:.2f}GB", mem_content), (f"Disk: {disk_total_gb:.2f}GB", disk_content), ("Network(UP/Down)", net_content)]
+        return self.cpu_count,cpu_content, mem_total_gb, mem_content, create_kv_grid("System", rows)
+
+    async def get_stat_table(self):
+        cpu_content, mem_total_gb, mem_content, disk_total_gb, disk_content, net_content = await self.get_stat()
+
         # Create Table
         table = Table(
             # box=box.ROUNDED,
@@ -129,18 +151,6 @@ class AioSystemUsage:
         table.add_column(f"Mem: {mem_total_gb:.2f}GB", justify="left", style="white")
         table.add_column(f"Disk: {disk_total_gb:.2f}GB", justify="left", style="white")
         table.add_column("Network(UP/Down)", justify="left", style="white")
-
-        # CPU Content
-        # cpu_content = f"{self.cpu_pct:.2f}%/{load_1:.2f}, {load_5:.2f}, {load_15:.2f}"
-        cpu_content = f"{self.cpu_pct * self.cpu_count:.2f}%"
-
-        # Memory Content (GB + History Stats)
-        mem_percent = 0 if self.mem_info is None else self.mem_info.percent
-        mem_content = f"{mem_used_gb:.2f}GB/{mem_percent:.2f}%"
-
-        disk_content = f"{disk_pct:.2f}%/{disk_used_gb:.2f}GB"
-
-        net_content = f"{net_sent}/{net_recv}"
 
         table.add_row(cpu_content, mem_content, disk_content, net_content)
         return table

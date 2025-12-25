@@ -13,7 +13,7 @@ import orjson
 from rich import box
 from rich.table import Table
 
-from monitor import BORDER_STYLE, HEADER_STYLE, HISTORY_SIZE
+from monitor import BORDER_STYLE, HEADER_STYLE, HISTORY_SIZE, create_kv_grid
 
 
 class FpsStatItem:
@@ -138,6 +138,35 @@ class AioFpsMonitor:
         # median, minimum, maximum, average
         return self.tot_stat.get_history_stat()
 
+    def get_stat_latest(self):
+        return f"{self.tot_stat.latest_committed_fps:.2f}"
+
+    def get_stat_throughout(self):
+        median, minimum, maximum, average = self.tot_stat.get_history_stat()
+        return f"{median:.2f}", f"{minimum:.2f}", f"{maximum:.2f}", f"{average:.2f}"
+
+    def get_stat_streams(self):
+        streams_fps = [x.latest_committed_fps for x in self.streams_stat.values()]
+        if len(streams_fps) == 0:
+            fps, minimum, maximum, average = 0, 0, 0, 0
+        else:
+            fps = sum(streams_fps)
+            minimum = min(streams_fps)
+            maximum = max(streams_fps)
+            average = fps / len(streams_fps)
+
+        return f"{fps:.2f}", f"{average:.2f}", f"{minimum:.2f}", f"{maximum:.2f}"
+
+    async def get_stat_throughout_grid(self):
+        median, minimum, maximum, average = self.get_stat_throughout()
+        rows = [("Med", median), ("Min", minimum), ("Max", maximum), ("Avg", average)]
+        return create_kv_grid("Fps Throughout", rows)
+
+    async def get_stat_streams_grid(self):
+        fps, average, minimum, maximum = self.get_stat_streams()
+        rows = [("Fps", fps), ("Min", minimum), ("Max", maximum), ("Avg", average)]
+        return create_kv_grid("Fps Streams", rows)
+
     async def get_stat_table_latest(self):
         table = Table(
             box=box.SIMPLE_HEAD, show_edge=False, padding=(0, 1), collapse_padding=True, show_lines=True, expand=True,
@@ -199,7 +228,7 @@ class AioFpsMonitor:
 
     async def get_detailed_streams_table(self):
         table = Table(
-            title="Status of streams",
+            title=None,
             title_style="white",
             box=box.ROUNDED,
             expand=True,

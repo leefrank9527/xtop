@@ -6,7 +6,7 @@ from rich import box
 from rich.table import Table
 from rich.text import Text
 
-from monitor import BORDER_STYLE, HEADER_STYLE
+from monitor import BORDER_STYLE, HEADER_STYLE, create_kv_grid
 
 
 def calc_cpu_percent(stats):
@@ -190,27 +190,21 @@ class AioDockerStats:
         finally:
             self.stats_cache.pop(cid, None)
 
-    async def basic_core_stats_table(self):
+    async def basic_core_stats_grid(self):
         core_row = self.stats_cache.get(CONTAINER_CORE_NAME, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        table = Table(
-            box=box.SIMPLE_HEAD,
-            show_edge=False,
-            padding=(0, 1),
-            expand=True,
-            collapse_padding=True, show_lines=True,
-            title=None,
-            header_style=HEADER_STYLE,
-            border_style=BORDER_STYLE
-        )
-        table.add_column(f"CPU: {core_row[3]}", justify="right", style="white")
-        table.add_column(f"MEM: {core_row[5]}", justify="right", style="white")
-        table.add_column("NET I/O", justify="right", style="white")
-        table.add_row(
-            f"{core_row[2]}",
-            f"{core_row[4]} / {core_row[6]}",
-            f"{core_row[7]}"
-        )
-        return table
+        cpu_count = core_row[3]
+        cpu_percent = core_row[2]
+        mem_limitation = core_row[5]
+        mem_percent = core_row[4]
+        mem_usage = core_row[6]
+        net_io = core_row[7]
+
+        rows = [(f"CPU: {cpu_count}", cpu_percent), (f"MEM: {mem_limitation}", f"{mem_percent} / {mem_usage}"), ("NET I/O", net_io)]
+        try:
+            grid = create_kv_grid(title="Container[Core]", rows=rows)
+        except Exception as ex:
+            print(ex)
+        return cpu_count, cpu_percent, mem_limitation, mem_percent, mem_usage, net_io, grid
 
     async def stats_table(self):
         table = Table(
