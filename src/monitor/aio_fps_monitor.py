@@ -159,12 +159,12 @@ class AioFpsMonitor:
 
     async def get_stat_throughout_grid(self):
         median, minimum, maximum, average = self.get_stat_throughout()
-        rows = [("Med", median), ("Min", minimum), ("Max", maximum), ("Avg", average)]
+        rows = [("Latest", f"{self.tot_stat.latest_committed_fps:.2f}"), ("Med", median), ("Min", minimum), ("Max", maximum), ("Avg", average)]
         return create_kv_grid("Fps Throughout", rows)
 
     async def get_stat_streams_grid(self):
         fps, average, minimum, maximum = self.get_stat_streams()
-        rows = [("Fps", fps), ("Min", minimum), ("Max", maximum), ("Avg", average)]
+        rows = [("Sum", fps), ("Min", minimum), ("Max", maximum), ("Avg", average)]
         return create_kv_grid("Fps Streams", rows)
 
     async def get_stat_table_latest(self):
@@ -185,7 +185,7 @@ class AioFpsMonitor:
         table = Table(
             title=None,
             title_style="white",
-            box=box.ROUNDED,
+            box=box.ASCII,
             expand=True,
             show_lines=False,
             header_style=HEADER_STYLE,

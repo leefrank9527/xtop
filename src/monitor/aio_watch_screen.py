@@ -22,7 +22,7 @@ from rich.align import Align
 from monitor.aio_docker_stats import AioDockerStats
 from monitor.aio_fps_monitor import AioFpsMonitor
 from monitor.aio_system_usage import AioSystemUsage
-from monitor import BORDER_STYLE, HEADER_STYLE, TICKS_COLOR, create_kv_grid
+from monitor import TICKS_COLOR, TITLE_STYLE
 
 
 async def get_cpu_model_linux():
@@ -57,7 +57,7 @@ async def aio_print_screen(args):
     server_url = args.server_url
     async with aiohttp.ClientSession() as session:
         async with session.get(f"{server_url}/api/version") as resp:
-            brainframe_os_version = await resp.json()
+            server_version = await resp.json()
 
     cpu_model = await  get_cpu_model_linux()
 
@@ -96,61 +96,30 @@ async def aio_print_screen(args):
 
         # 4. Add the content
         grid.add_row(
-            Text(f"BrainFrame OS: {brainframe_os_version} | CPU: {cpu_model}", style="bold green"),
+            Text(f"BrainFrame OS: {server_version} | CPU: {cpu_model}", style="bold green"),
             Text(current_time, style="bold cyan"),
             Text("Press 'q' to quit", style="bold red")
         )
         return grid
 
-    async def get_stat_table_group():
-
-        # FPS
-        fps_latest = fps_monitor.get_stat_latest()
-
-        fps_throughout_grid = await fps_monitor.get_stat_throughout_grid()
-        fps_streams_grid = await fps_monitor.get_stat_streams_grid()
-        cpu_count, cpu_content, mem_total_gb, mem_content, system_grid = await  system_monitor.get_stat_grid()
-
-        core_cpu_count, core_cpu_percent, core_mem_limitation, core_mem_percent, core_mem_usage, core_net_io, docker_core_grid = await docker_monitor.basic_core_stats_grid()
-
-        basic_rows = [
-            ("Fps", fps_latest),
-            (f"System CPU: {cpu_count}C", cpu_content),
-            (f"System Mem: {mem_total_gb:.2f}GB", mem_content),
-            (f"Core CPU: {core_cpu_count}", core_cpu_percent),
-            (f"Core Mem: {core_mem_limitation}", f"{core_mem_percent} / {core_mem_usage}"),
-        ]
-        basic_grid = create_kv_grid("Basic Stats", basic_rows)
-
-        group = Group(
-            Align.left("Critical Stats", style="bold white"),
-            basic_grid,
-            fps_throughout_grid,
-            fps_streams_grid,
-            system_grid,
-            docker_core_grid,
-        )
-
-        return group
-
     async def make_chart(width):
         plt.clf()  # Clear previous frame
         plt.clear_color()
         plt.ticks_color(TICKS_COLOR)
-        # plt.axes_color(BORDER_STYLE)
+        # plt.axes_color("black")
 
         calc_width = width - 3 if width > 80 else 77
-        plt.plot_size(calc_width, 25)
+        plt.plot_size(calc_width, 20)
         plt.limit_size(False, False)
 
         # --- RIGHT AXIS: Percentages ---
         # CPU and Memory moved to the right side
-        plt.plot(system_monitor.cpu_history, label="CPU %", color="red", marker="braille", yside="right")
-        plt.plot(system_monitor.mem_history, label="Mem %", color="cyan", marker="braille", yside="right")
+        plt.plot(system_monitor.cpu_history, label="CPU %", color="cyan", marker="braille", yside="right")
+        plt.plot(system_monitor.mem_history, label="Mem %", color="magenta", marker="braille", yside="right")
 
         # --- LEFT AXIS: FPS ---
         # Primary focus is now FPS on the left
-        plt.plot(fps_monitor.tot_stat.fps_history, label="FPS", color="white", marker="braille", yside="left")
+        plt.plot(fps_monitor.tot_stat.fps_history, label="FPS", color="red", marker="braille", yside="left")
         max_fps = max(fps_monitor.tot_stat.fps_history)
         max_fps = math.floor(max_fps) + 1 if max_fps > 0 else 20
 
@@ -173,7 +142,7 @@ async def aio_print_screen(args):
         Text("│"),
         border_style="black",
         style="bright_white on black",
-        box=box.SQUARE,
+        box=box.SIMPLE,
     )
 
     margin = Panel(
@@ -195,19 +164,35 @@ async def aio_print_screen(args):
             while not stop_event.is_set():
                 current_width = live.console.width
 
-                left_group = await  get_stat_table_group()
+                # left_group = await  get_stat_table_group()
+                fps_throughout_grid = await fps_monitor.get_stat_throughout_grid()
+                fps_streams_grid = await fps_monitor.get_stat_streams_grid()
+                system_grid = await  system_monitor.get_stat_grid()
+                try:
+                    docker_grid = await docker_monitor.basic_stats_grid()
+                except Exception as ex:
+                    print(ex)
 
-                right_group = Group(
-                    Align.left("Docker Container Stats", style="bold white"),
-                    await docker_monitor.stats_table(),
-                    Align.left("\r\nFPS (Left) vs System Usage (Right)", style="bold white"),
-                    Text.from_ansi(await make_chart(current_width * 0.8)),
-                    Align.left("\r\nStatus of streams", style="bold white"),
-                    await fps_monitor.get_detailed_streams_table(),
+                layout["left"].update(
+                    Group(
+                        # Align.left("Critical Stats", style="bold white"),
+                        fps_throughout_grid,
+                        fps_streams_grid,
+                        system_grid,
+                        docker_grid
+                    )
                 )
 
-                layout["left"].update(left_group)
-                layout["right"].update(right_group)
+                layout["right"].update(
+                    Group(
+                        Align.left("\r\nDocker Container Stats", style=TITLE_STYLE),
+                        await docker_monitor.stats_table(),
+                        Align.left("\r\nFPS (Left) vs System Usage (Right)", style=TITLE_STYLE),
+                        Text.from_ansi(await make_chart(current_width * 0.8)),
+                        Align.left("\r\nStatus of streams", style=TITLE_STYLE),
+                        await fps_monitor.get_detailed_streams_table(),
+                    )
+                )
 
                 dashboard_group = Group(
                     await render_top_header(),
