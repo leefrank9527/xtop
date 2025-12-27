@@ -1,67 +1,25 @@
+import time
+from dataclasses import dataclass
+
 import aiohttp
 import asyncio
 import docker
 import orjson
-from dataclasses import dataclass
 from typing import Optional
 from rich import box
 from rich.table import Table
 from rich.text import Text
 
-from monitor import create_kv_grid, BORDER_STYLE, HEADER_STYLE
-from monitor.aio_utils import format_bytes
+from monitor import BORDER_STYLE, HEADER_STYLE, ResourceStats, ResourceItem, format_bytes, format_net_speed
 
 
 @dataclass
-class ContainerStats:
-    id: str
-    name: str
-    cpu_percent: float
-    cpu_limit: float
-    mem_usage: int
-    mem_limit: int
-    mem_percent: float
-    net_rx: int
-    net_tx: int
-    blk_read: int
-    blk_write: int
-    pids: int
-
-    @property
-    def cpu_str(self) -> str:
-        return f"{self.cpu_percent:.2f}%"
-
-    @property
-    def cpu_limit_str(self) -> str:
-        return f"{self.cpu_limit} C"
-
-    @property
-    def mem_usage_str(self) -> str:
-        return format_bytes(self.mem_usage)
-
-    @property
-    def mem_limit_str(self) -> str:
-        return format_bytes(self.mem_limit)
-
-    @property
-    def mem_percent_str(self) -> str:
-        return f"{self.mem_percent:.2f}%"
-
-    @property
-    def mem_str(self):
-        return f"{self.mem_percent_str} / {self.mem_usage_str}"
-
-    @property
-    def net_read_str(self) -> str:
-        return f"{format_bytes(self.net_rx)}"
-
-    @property
-    def net_write_str(self) -> str:
-        return f"{format_bytes(self.net_tx)}"
-
-    @property
-    def net_io_str(self) -> str:
-        return f"{self.net_read_str} / {self.net_write_str}"
+class DockerContainerResourceStats(ResourceStats):
+    id: str = ""
+    name: str = ""
+    blk_read: int = 0
+    blk_write: int = 0
+    pids: int = 0
 
     @property
     def block_io_str(self) -> str:
@@ -114,31 +72,45 @@ def get_cpu_limit(container_name):
     return None
 
 
-async def process_container(cid: str, name: str, stats: dict, cpu_cores: Optional[float]) -> Optional[ContainerStats]:
-    if not stats:
+async def process_container(cid: str, name: str, perf_info: dict, cpu_cores: Optional[float], previous_stats: DockerContainerResourceStats) -> Optional[DockerContainerResourceStats]:
+    if not perf_info:
         return None
 
+    stats = DockerContainerResourceStats(tstamp=time.time(), id=cid, name=name)
+
     # CPU
-    cpu_pct = calc_cpu_percent(stats)
-    online_cpus = stats.get("cpu_stats", {}).get("online_cpus", 1) if cpu_cores is None else cpu_cores
+    cpu_pct = calc_cpu_percent(perf_info)
+    online_cpus = perf_info.get("cpu_stats", {}).get("online_cpus", 1) if cpu_cores is None else cpu_cores
+
+    stats.cpu_info = ResourceItem(total=online_cpus, percent=cpu_pct, used=0)
 
     # Memory
-    mem_stats = stats.get("memory_stats", {})
+    mem_stats = perf_info.get("memory_stats", {})
     mem_usage = mem_stats.get("usage", 0)
     mem_limit = mem_stats.get("limit", 0)
-    mem_pct = calc_mem_percent(stats)
+    mem_pct = calc_mem_percent(perf_info)
+
+    stats.mem_info = ResourceItem(total=mem_limit, percent=mem_pct, used=mem_usage)
 
     # Net I/O
     rx = tx = 0
-    networks = stats.get("networks")
+    networks = perf_info.get("networks")
     if networks:
         for iface in networks.values():
             rx += iface.get("rx_bytes", 0)
             tx += iface.get("tx_bytes", 0)
 
+    stats.network_read = rx
+    stats.network_write = tx
+
+    time_delta = stats.tstamp - previous_stats.tstamp
+    if time_delta > 0:
+        stats.network_read_speed = (stats.network_read - previous_stats.network_read) / time_delta
+        stats.network_write_speed = (stats.network_write - previous_stats.network_write) / time_delta
+
     # Block I/O
     rd = wr = 0
-    blkio = stats.get("blkio_stats", {})
+    blkio = perf_info.get("blkio_stats", {})
     if blkio:
         io_service_bytes_recursive = blkio.get("io_service_bytes_recursive", [])
         if io_service_bytes_recursive:
@@ -148,23 +120,11 @@ async def process_container(cid: str, name: str, stats: dict, cpu_cores: Optiona
                     rd += entry.get("value", 0)
                 elif op == "Write":
                     wr += entry.get("value", 0)
+    stats.blk_read = rd
+    stats.blk_write = wr
+    stats.pids = perf_info.get("pids_stats", {}).get("current", 0)
 
-    pids = stats.get("pids_stats", {}).get("current", 0)
-
-    return ContainerStats(
-        id=cid[:12],
-        name=name,
-        cpu_percent=cpu_pct,
-        cpu_limit=online_cpus,
-        mem_usage=mem_usage,
-        mem_limit=mem_limit,
-        mem_percent=mem_pct,
-        net_rx=rx,
-        net_tx=tx,
-        blk_read=rd,
-        blk_write=wr,
-        pids=pids
-    )
+    return stats
 
 
 CONTAINER_CORE_NAME = "brainframe-core-1"
@@ -176,7 +136,7 @@ class AioDockerStats:
         self.session = None
         self.event_watcher = None
         self.active_tasks = {}
-        self.stats_cache: dict[str, ContainerStats] = {}
+        self.stats_cache: dict[str, DockerContainerResourceStats] = {}
 
     async def start(self):
         timeout = aiohttp.ClientTimeout(total=None)
@@ -202,7 +162,7 @@ class AioDockerStats:
                     containers_map[name] = True
                     if name not in self.active_tasks:
                         cpu_cores = get_cpu_limit(name)
-                        cid = c["Id"]
+                        cid = c["Id"][0:12]
                         self.active_tasks[name] = asyncio.create_task(
                             self.stream_container_stats(cid, name, cpu_cores)
                         )
@@ -230,7 +190,8 @@ class AioDockerStats:
                 async for line in resp.content:
                     if not line: continue
                     stats_json = orjson.loads(line.decode())
-                    processed = await process_container(cid, name, stats_json, cpu_cores)
+                    prev_stats = self.stats_cache.get(name, DockerContainerResourceStats(tstamp=time.time()))
+                    processed = await process_container(cid, name, stats_json, cpu_cores, previous_stats=prev_stats)
                     if processed:
                         self.stats_cache[name] = processed
         except asyncio.CancelledError:
@@ -240,31 +201,38 @@ class AioDockerStats:
         finally:
             self.stats_cache.pop(name, None)
 
-    async def basic_stats_grid(self):
+    async def render_basic_stats_row_core(self, t):
         stats = self.stats_cache.get(CONTAINER_CORE_NAME)
         if not stats:
-            return create_kv_grid(title=f"Containers", rows=[])
+            return t
+        t.add_row(
+            Text(f"Core: {stats.cpu_limit_str}/{stats.mem_limit_str}", style=HEADER_STYLE),
+            stats.cpu_str,
+            stats.mem_str,
+            stats.network_str,
+            "/",
+        )
+        return t
 
-        tot_cpu, tot_mem = 0, 0
+    async def render_basic_stats_row_all(self, t):
+        tot_cpu_used, tot_mem_used, tot_read_speed, tot_write_speed = 0, 0, 0, 0
         for item in list(self.stats_cache.values()):
-            tot_cpu += item.cpu_percent
-            tot_mem += item.mem_usage
+            tot_cpu_used += item.cpu_info.percent
+            tot_mem_used += item.mem_info.used
+            tot_read_speed += item.network_read_speed
+            tot_write_speed += item.network_write_speed
+        t.add_row(
+            Text("All Containers", style=HEADER_STYLE),
+            f"{tot_cpu_used:.2f}%",
+            format_bytes(tot_mem_used),
+            f"{format_net_speed(tot_read_speed)} / {format_net_speed(tot_write_speed)}",
+            "/",
+        )
+        return t
 
-        # Example of how easy it is to access data now:
-        rows = [
-            (f"Core CPU", stats.cpu_str),
-            (f"Core MEM", stats.mem_str),
-            (f"Core Net-I", stats.net_read_str),
-            (f"Core Net-O", stats.net_write_str),
-            (f"Total CPU", f"{tot_cpu:.2f}%"),
-            (f"Total MEM", format_bytes(tot_mem)),
-        ]
-
-        return create_kv_grid(title=f"Containers[Core: {stats.cpu_limit_str} / {stats.mem_limit_str}]", rows=rows)
-
-    async def stats_table(self):
+    async def render_stats_table(self):
         table = Table(
-            box=box.ASCII,
+            box=box.SIMPLE,
             expand=True,
             header_style=HEADER_STYLE,
             border_style=BORDER_STYLE
@@ -272,22 +240,22 @@ class AioDockerStats:
 
         table.add_column("ID", justify="left", max_width=12, style="dim")
         table.add_column("NAME", justify="left", overflow="ellipsis")
-        table.add_column("CPU % / LIMIT", justify="right")
-        table.add_column("MEM USAGE / LIMIT / MEM %", justify="right")
+        table.add_column("CPU %/LIMIT", justify="right")
+        table.add_column("MEM %/USED/LIMIT", justify="right")
         table.add_column("NETWORK I/O", justify="right", style="dim")
-        table.add_column("BLOCK I/O", justify="right", style="dim")
+        # table.add_column("BLOCK I/O", justify="right", style="dim")
         table.add_column("PIDS", justify="right", style="dim")
 
         for stats in self.stats_cache.values():
-            cpu_style = "red" if stats.cpu_percent > 80.0 else "green"
+            cpu_style = "red" if stats.cpu_info.percent > 80.0 else "green"
 
             table.add_row(
                 stats.id,
                 stats.name,
-                Text(f"{stats.cpu_str} / {stats.cpu_limit_str}", style=cpu_style),
-                f"{stats.mem_usage_str} / {stats.mem_limit_str} / {stats.mem_percent_str}",
-                stats.net_io_str,
-                stats.block_io_str,
+                Text(f"{stats.cpu_str}/{stats.cpu_limit_str}", style=cpu_style),
+                f"{stats.mem_percent_str}/{stats.mem_usage_str}/{stats.mem_limit_str}",
+                stats.network_str,
+                # stats.block_io_str,
                 str(stats.pids)
             )
 

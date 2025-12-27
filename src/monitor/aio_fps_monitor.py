@@ -12,8 +12,9 @@ import statistics
 import orjson
 from rich import box
 from rich.table import Table
+from rich.text import Text
 
-from monitor import BORDER_STYLE, HEADER_STYLE, HISTORY_SIZE, create_kv_grid
+from monitor import BORDER_STYLE, HEADER_STYLE, HISTORY_SIZE, create_kv_grid, create_basic_table
 
 
 class FpsStatItem:
@@ -167,21 +168,43 @@ class AioFpsMonitor:
         rows = [("Sum", fps), ("Min", minimum), ("Max", maximum), ("Avg", average)]
         return create_kv_grid("Fps Streams", rows)
 
-    async def get_stat_table_latest(self):
-        table = Table(
-            box=box.SIMPLE_HEAD, show_edge=False, padding=(0, 1), collapse_padding=True, show_lines=True, expand=True,
-            header_style=HEADER_STYLE,
-            border_style=BORDER_STYLE
-        )
+    async def add_stat_throughout(self, grid):
+        median, minimum, maximum, average = self.get_stat_throughout()
+        grid.add_row(
+            Text("Throughout", style=HEADER_STYLE),
+            f"{self.tot_stat.latest_committed_fps:.2f}",
+            average,
+            minimum,
+            maximum,
+        ),
+        return grid
 
-        # Define columns
-        table.add_column("LATEST", justify="center", style="white")
+    async def add_stat_streams(self, grid):
+        fps, average, minimum, maximum = self.get_stat_streams()
+        grid.add_row(
+            Text("Streams", style=HEADER_STYLE),
+            fps,
+            average,
+            minimum,
+            maximum,
+        ),
+        return grid
 
-        # Add the data row
-        table.add_row(f"{self.tot_stat.latest_committed_fps:.2f}")
-        return table
+    async def render_basic_stats(self):
+        t = create_basic_table("FPS")
 
-    async def get_detailed_streams_table(self):
+        t.add_column("Metrics", justify="left", ratio=2)
+        t.add_column("FPS", justify="right", ratio=1)
+        t.add_column("Avg", justify="right", ratio=1)
+        t.add_column("Min", justify="right", ratio=1)
+        t.add_column("Max", justify="right", ratio=1)
+
+        await self.add_stat_throughout(t)
+        await self.add_stat_streams(t)
+
+        return t
+
+    async def render_detailed_streams_status(self):
         table = Table(
             title=None,
             title_style="white",

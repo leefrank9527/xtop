@@ -18,11 +18,12 @@ from rich.text import Text
 from rich.table import Table
 from rich import box
 from rich.align import Align
+from rich.rule import Rule
 
 from monitor.aio_docker_stats import AioDockerStats
 from monitor.aio_fps_monitor import AioFpsMonitor
 from monitor.aio_system_usage import AioSystemUsage
-from monitor import TICKS_COLOR, TITLE_STYLE
+from monitor import TICKS_COLOR, TITLE_STYLE, create_basic_table, BORDER_STYLE
 
 
 async def get_cpu_model_linux():
@@ -102,6 +103,20 @@ async def aio_print_screen(args):
         )
         return grid
 
+    async def render_basic_resources_stats():
+        t = create_basic_table("Resources")
+        t.add_column("Metrics", justify="left", ratio=2)
+        t.add_column("CPU", justify="right", ratio=1)
+        t.add_column("Mem", justify="right", ratio=1)
+        t.add_column("Network I/O", justify="right", ratio=1)
+        t.add_column("Disk", justify="right", ratio=1)
+
+        await  system_monitor.render_basic_stats_row(t)
+        await  docker_monitor.render_basic_stats_row_core(t)
+        await  docker_monitor.render_basic_stats_row_all(t)
+
+        return t
+
     async def make_chart(width):
         plt.clf()  # Clear previous frame
         plt.clear_color()
@@ -138,71 +153,51 @@ async def aio_print_screen(args):
 
         return plt.build()
 
-    divider = Panel(
-        Text("│"),
-        border_style="black",
-        style="bright_white on black",
-        box=box.SIMPLE,
-    )
-
-    margin = Panel(
-        Text("│"),
-        box=box.MINIMAL,
-    )
-
     layout = Layout()
-    layout.split_row(
-        Layout(name="left", ratio=1),
-        Layout(margin, size=1),
-        Layout(divider, size=1),
-        Layout(margin, size=1),
-        Layout(name="right", ratio=4),
-    )
 
     try:
-        with Live(layout, refresh_per_second=2, screen=True) as live:
+        with Live(Group(), refresh_per_second=1, screen=True) as live:
             while not stop_event.is_set():
                 current_width = live.console.width
 
                 # left_group = await  get_stat_table_group()
-                fps_throughout_grid = await fps_monitor.get_stat_throughout_grid()
-                fps_streams_grid = await fps_monitor.get_stat_streams_grid()
-                system_grid = await  system_monitor.get_stat_grid()
                 try:
-                    docker_grid = await docker_monitor.basic_stats_grid()
-                except Exception as ex:
-                    print(ex)
+                    basic_fps_table = await fps_monitor.render_basic_stats()
+                    basic_resources_table = await  render_basic_resources_stats()
+                except Exception as e:
+                    print(e)
 
-                layout["left"].update(
-                    Group(
-                        # Align.left("Critical Stats", style="bold white"),
-                        fps_throughout_grid,
-                        fps_streams_grid,
-                        system_grid,
-                        docker_grid
-                    )
+                left_group = Group(
+                    basic_resources_table,
+                    Rule(characters=" "),
+                    Align.left("\r\nFPS (Left) vs System Resource (Right)", style=TITLE_STYLE),
+                    Text.from_ansi(await make_chart(current_width * 0.7)),
+                    Rule(characters=" "),
+                    Align.left("\r\nDocker Container Stats", style=TITLE_STYLE),
+                    await docker_monitor.render_stats_table(),
                 )
 
-                layout["right"].update(
-                    Group(
-                        Align.left("\r\nDocker Container Stats", style=TITLE_STYLE),
-                        await docker_monitor.stats_table(),
-                        Align.left("\r\nFPS (Left) vs System Usage (Right)", style=TITLE_STYLE),
-                        Text.from_ansi(await make_chart(current_width * 0.8)),
-                        Align.left("\r\nStatus of streams", style=TITLE_STYLE),
-                        await fps_monitor.get_detailed_streams_table(),
-                    )
+                right_group = Group(
+                    basic_fps_table,
+                    Align.left("\r\nStatus of streams", style=TITLE_STYLE),
+                    await fps_monitor.render_detailed_streams_status(),
                 )
 
-                dashboard_group = Group(
+                layout_table = Table(show_header=False, show_lines=False, box=box.MINIMAL, expand=True, border_style=BORDER_STYLE)
+                layout_table.add_column("left", justify="left", ratio=7)
+                layout_table.add_column("right", justify="right", ratio=3)
+
+                layout_table.add_row(left_group, right_group)
+
+                root_group = Group(
                     await render_top_header(),
-                    Align.center(" "),
-                    layout,
-                    Align.center(" End "),
+                    Rule(style=BORDER_STYLE),
+                    layout_table,
+                    # Rule(style=BORDER_STYLE),
+
                 )
 
-                live.update(dashboard_group)
-                # live.update(layout)
+                live.update(root_group)
 
                 await asyncio.sleep(delay=1.0)
     finally:

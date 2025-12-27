@@ -1,36 +1,11 @@
 import asyncio
 import time
 from collections import deque
-from dataclasses import dataclass
 
 import psutil
+from rich.text import Text
 
-from monitor import HISTORY_SIZE, create_kv_grid
-
-from monitor.aio_utils import format_bytes, format_net_speed
-
-
-@dataclass
-class SystemResourceItem:
-    total: float
-    percent: float
-    used: float
-
-
-zero_item = SystemResourceItem(0, 0, 0)
-
-
-@dataclass
-class SystemUsageStats:
-    tstamp: float = time.time()
-    cpu_info: SystemResourceItem = zero_item
-    mem_info: SystemResourceItem = zero_item
-    disk_info: SystemResourceItem = zero_item
-    load_avg: tuple[float, float, float] = (0, 0, 0)
-    network_read: float = 0
-    network_write: float = 0
-    network_read_speed: float = 0
-    network_write_speed: float = 0
+from monitor import HISTORY_SIZE, create_kv_grid, HEADER_STYLE, ResourceStats, ResourceItem, format_bytes, format_net_speed
 
 
 class AioSystemUsage:
@@ -38,10 +13,10 @@ class AioSystemUsage:
         self.history_size = history_size
 
         # History Deques
-        self.system_usage_history = deque([SystemUsageStats()] * history_size, maxlen=history_size)
+        self.system_usage_history = deque([ResourceStats()] * history_size, maxlen=history_size)
 
         # State Variables
-        self.stats = SystemUsageStats()
+        self.stats = ResourceStats()
 
         self.task_event_loop = None
 
@@ -54,23 +29,23 @@ class AioSystemUsage:
 
     async def _event_loop(self):
         while True:
-            stats = SystemUsageStats(tstamp=time.time())
+            stats = ResourceStats(tstamp=time.time())
 
             # 1. CPU
             cpu_pct = psutil.cpu_percent(interval=None)
             cpu_count = psutil.cpu_count(logical=True)
-            stats.cpu_info = SystemResourceItem(total=cpu_count, percent=cpu_pct, used=cpu_pct * cpu_count)
+            stats.cpu_info = ResourceItem(total=cpu_count, percent=cpu_pct, used=cpu_pct * cpu_count)
 
             if hasattr(psutil, "getloadavg"):
                 stats.load_avg = psutil.getloadavg()
 
             # 2. Memory
             mem_info = psutil.virtual_memory()
-            stats.mem_info = SystemResourceItem(total=mem_info.total, percent=mem_info.percent, used=mem_info.used)
+            stats.mem_info = ResourceItem(total=mem_info.total, percent=mem_info.percent, used=mem_info.used)
 
             # 3. Disk
             disk_info = psutil.disk_usage('/')
-            stats.disk_info = SystemResourceItem(total=disk_info.total, percent=disk_info.percent, used=disk_info.used)
+            stats.disk_info = ResourceItem(total=disk_info.total, percent=disk_info.percent, used=disk_info.used)
 
             # 4. Network
             net_io = psutil.net_io_counters()
@@ -133,3 +108,14 @@ class AioSystemUsage:
         cpu_count_str, cpu_content, mem_total_str, mem_content, disk_total_str, disk_content, net_content = await self.get_stat()
         rows = [(f"CPU:{cpu_count_str}", cpu_content), (f"Mem: {mem_total_str}", mem_content), (f"Disk: {disk_total_str}", disk_content), ("Network(UP/Down)", net_content)]
         return create_kv_grid("System", rows)
+
+    async def render_basic_stats_row(self, t):
+        # cpu_count_str, cpu_content, mem_total_str, mem_content, disk_total_str, disk_content, net_content = await self.get_stat()
+        stats = self.stats
+        t.add_row(
+            Text(f"System: {stats.cpu_limit_str}/{stats.mem_limit_str}", style=HEADER_STYLE),
+            stats.cpu_long_str,
+            stats.mem_str,
+            stats.network_str,
+            stats.disk_str,
+        )
