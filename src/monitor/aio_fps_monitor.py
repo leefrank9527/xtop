@@ -194,7 +194,7 @@ class AioFpsMonitor:
         t = create_basic_table("FPS")
 
         t.add_column("Metrics", justify="left", ratio=2)
-        t.add_column("FPS", justify="right", ratio=1)
+        t.add_column("Latest", justify="right", ratio=1)
         t.add_column("Avg", justify="right", ratio=1)
         t.add_column("Min", justify="right", ratio=1)
         t.add_column("Max", justify="right", ratio=1)
@@ -208,7 +208,7 @@ class AioFpsMonitor:
         table = Table(
             title=None,
             title_style="white",
-            box=box.ASCII,
+            box=box.SIMPLE,
             expand=True,
             show_lines=False,
             header_style=HEADER_STYLE,

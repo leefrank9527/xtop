@@ -12,8 +12,6 @@ import plotext as plt
 import platform
 from rich.console import Group
 from rich.live import Live
-from rich.layout import Layout
-from rich.panel import Panel
 from rich.text import Text
 from rich.table import Table
 from rich import box
@@ -97,19 +95,20 @@ async def aio_print_screen(args):
 
         # 4. Add the content
         grid.add_row(
-            Text(f"BrainFrame OS: {server_version} | CPU: {cpu_model}", style="bold green"),
+            Text("xtop: press 'ctrl + c' to quit", style="bold green"),
             Text(current_time, style="bold cyan"),
-            Text("Press 'q' to quit", style="bold red")
+            Text(f"BrainFrame OS: {server_version} | CPU: {cpu_model}", style="bold green"),
         )
+        # return Panel(grid, box=box.MINIMAL)
         return grid
 
     async def render_basic_resources_stats():
         t = create_basic_table("Resources")
-        t.add_column("Metrics", justify="left", ratio=2)
+        t.add_column("Metrics", justify="left", ratio=3)
         t.add_column("CPU", justify="right", ratio=1)
-        t.add_column("Mem", justify="right", ratio=1)
-        t.add_column("Network I/O", justify="right", ratio=1)
-        t.add_column("Disk", justify="right", ratio=1)
+        t.add_column("Mem", justify="right", ratio=2)
+        t.add_column("Network I/O(S)", justify="right", ratio=3)
+        t.add_column("Disk", justify="right", ratio=2)
 
         await  system_monitor.render_basic_stats_row(t)
         await  docker_monitor.render_basic_stats_row_core(t)
@@ -124,7 +123,7 @@ async def aio_print_screen(args):
         # plt.axes_color("black")
 
         calc_width = width - 3 if width > 80 else 77
-        plt.plot_size(calc_width, 20)
+        plt.plot_size(calc_width, 25)
         plt.limit_size(False, False)
 
         # --- RIGHT AXIS: Percentages ---
@@ -153,8 +152,6 @@ async def aio_print_screen(args):
 
         return plt.build()
 
-    layout = Layout()
-
     try:
         with Live(Group(), refresh_per_second=1, screen=True) as live:
             while not stop_event.is_set():
@@ -164,6 +161,7 @@ async def aio_print_screen(args):
                 try:
                     basic_fps_table = await fps_monitor.render_basic_stats()
                     basic_resources_table = await  render_basic_resources_stats()
+
                 except Exception as e:
                     print(e)
 
@@ -183,7 +181,7 @@ async def aio_print_screen(args):
                     await fps_monitor.render_detailed_streams_status(),
                 )
 
-                layout_table = Table(show_header=False, show_lines=False, box=box.MINIMAL, expand=True, border_style=BORDER_STYLE)
+                layout_table = Table(show_header=False, show_lines=False, box=box.ROUNDED, expand=True, border_style=BORDER_STYLE)
                 layout_table.add_column("left", justify="left", ratio=7)
                 layout_table.add_column("right", justify="right", ratio=3)
 
@@ -191,10 +189,11 @@ async def aio_print_screen(args):
 
                 root_group = Group(
                     await render_top_header(),
-                    Rule(style=BORDER_STYLE),
+                    # Rule(style=BORDER_STYLE),
                     layout_table,
                     # Rule(style=BORDER_STYLE),
-
+                    # Align.center(Text("Press 'q' to quit", style="bold red")),
+                    # Rule(style=BORDER_STYLE),
                 )
 
                 live.update(root_group)

@@ -26,8 +26,8 @@ def format_bytes(num: float) -> str:
 
 def format_net_speed(bytes_per_sec):
     if bytes_per_sec < 1024 * 1024:
-        return f"{bytes_per_sec / 1024:.1f}KB/s"
-    return f"{bytes_per_sec / (1024 * 1024):.1f}MB/s"
+        return f"{bytes_per_sec / 1024:.1f}KB"
+    return f"{bytes_per_sec / (1024 * 1024):.1f}MB"
 
 
 @dataclass
@@ -139,9 +139,9 @@ def create_basic_table(title: str):
         title=Text(title, style=TITLE_STYLE),
         title_justify="left",
         show_header=True,
-        box=box.ASCII,
+        box=box.SIMPLE,
         expand=True,
-        show_lines=True,
+        show_lines=False,
         header_style=HEADER_STYLE,
         border_style=BORDER_STYLE
     )

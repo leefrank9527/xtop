@@ -242,7 +242,7 @@ class AioDockerStats:
         table.add_column("NAME", justify="left", overflow="ellipsis")
         table.add_column("CPU %/LIMIT", justify="right")
         table.add_column("MEM %/USED/LIMIT", justify="right")
-        table.add_column("NETWORK I/O", justify="right", style="dim")
+        table.add_column("NETWORK I/O(S)", justify="right", style="dim")
         # table.add_column("BLOCK I/O", justify="right", style="dim")
         table.add_column("PIDS", justify="right", style="dim")
 
