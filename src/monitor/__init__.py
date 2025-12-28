@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from rich import box
 from rich.table import Table
@@ -7,10 +8,10 @@ from rich.text import Text
 HISTORY_SIZE = 60
 
 # BORDER_STYLE = "rgb(96,96,96)"
-BORDER_STYLE = "black"
-TICKS_COLOR = "black"
+BORDER_STYLE = "green"
+TICKS_COLOR = "green"
 # HEADER_STYLE = "magenta"
-HEADER_STYLE = "cyan"
+HEADER_STYLE = "green"
 TITLE_STYLE = "bold green"
 WHITE = "\033[37m"
 RESET = "\033[0m"
@@ -134,7 +135,7 @@ def create_kv_grid(title: str, rows: list) -> Table:
     return grid
 
 
-def create_basic_table(title: str):
+def create_table(title: Optional[str]):
     t = Table(
         title=Text(title, style=TITLE_STYLE),
         title_justify="left",
@@ -146,3 +147,18 @@ def create_basic_table(title: str):
         border_style=BORDER_STYLE
     )
     return t
+
+
+def create_basic_table(title: Optional[str] = None):
+    if title is None:
+        t = Table(
+            show_header=True,
+            box=box.SIMPLE,
+            expand=True,
+            show_lines=False,
+            header_style=HEADER_STYLE,
+            border_style=BORDER_STYLE
+        )
+        return t
+    else:
+        return create_table(title)

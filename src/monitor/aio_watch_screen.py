@@ -171,13 +171,13 @@ async def aio_print_screen(args):
                     Align.left("\r\nFPS (Left) vs System Resource (Right)", style=TITLE_STYLE),
                     Text.from_ansi(await make_chart(current_width * 0.7)),
                     Rule(characters=" "),
-                    Align.left("\r\nDocker Container Stats", style=TITLE_STYLE),
+                    # Align.left("\r\nDocker Container Stats", style=TITLE_STYLE),
                     await docker_monitor.render_stats_table(),
                 )
 
                 right_group = Group(
                     basic_fps_table,
-                    Align.left("\r\nStatus of streams", style=TITLE_STYLE),
+                    Rule(characters=" "),
                     await fps_monitor.render_detailed_streams_status(),
                 )
 

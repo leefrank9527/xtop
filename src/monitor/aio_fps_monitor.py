@@ -10,11 +10,9 @@ from dataclasses import dataclass
 import statistics
 
 import orjson
-from rich import box
-from rich.table import Table
 from rich.text import Text
 
-from monitor import BORDER_STYLE, HEADER_STYLE, HISTORY_SIZE, create_kv_grid, create_basic_table
+from monitor import HEADER_STYLE, HISTORY_SIZE, create_kv_grid, create_basic_table, create_table
 
 
 class FpsStatItem:
@@ -205,15 +203,7 @@ class AioFpsMonitor:
         return t
 
     async def render_detailed_streams_status(self):
-        table = Table(
-            title=None,
-            title_style="white",
-            box=box.SIMPLE,
-            expand=True,
-            show_lines=False,
-            header_style=HEADER_STYLE,
-            border_style=BORDER_STYLE
-        )
+        table = create_table("Status of streams")
         table.add_column("A/K", justify="right", style="dim")
         table.add_column("sID", justify="left", no_wrap=True, max_width=2, style="dim")
         table.add_column("NAME", justify="left", overflow="ellipsis", style="dim")

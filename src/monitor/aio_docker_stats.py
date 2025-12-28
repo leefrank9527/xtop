@@ -6,11 +6,9 @@ import asyncio
 import docker
 import orjson
 from typing import Optional
-from rich import box
-from rich.table import Table
 from rich.text import Text
 
-from monitor import BORDER_STYLE, HEADER_STYLE, ResourceStats, ResourceItem, format_bytes, format_net_speed
+from monitor import HEADER_STYLE, ResourceStats, ResourceItem, format_bytes, format_net_speed, create_table
 
 
 @dataclass
@@ -231,12 +229,7 @@ class AioDockerStats:
         return t
 
     async def render_stats_table(self):
-        table = Table(
-            box=box.SIMPLE,
-            expand=True,
-            header_style=HEADER_STYLE,
-            border_style=BORDER_STYLE
-        )
+        table = create_table("Docker Container Stats")
 
         table.add_column("ID", justify="left", max_width=12, style="dim")
         table.add_column("NAME", justify="left", overflow="ellipsis")
