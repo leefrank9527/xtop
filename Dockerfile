@@ -1,22 +1,27 @@
-FROM ubuntu:24.04
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-    sudo supervisor nginx dos2unix \
-    linux-libc-dev gcc python3-dev \
-    python3-venv
+FROM python:3.10-slim
 
-
-WORKDIR /deployment
-COPY monitor/ ./monitor
-COPY main.py ./
+#RUN apt-get update \
+#    && apt-get install -y --no-install-recommends \
+#    wget git
+#
+WORKDIR /xtop/
+COPY src/ ./src
+COPY pyproject.toml ./
 COPY requirements.txt ./
+COPY README.md ./
+COPY LICENSE ./
 
-# Create a virtual environment
-RUN python3 -m venv --system-site-packages /deployment/.venv
-
-# Activate the virtual environment and install Python packages
-ENV PATH="/deployment/.venv/bin:$PATH"
+#
 RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r ./requirements.txt
+#RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install .
 
-CMD ["python3", "main.py"]
+#
+#
+#CMD ["python3", "main.py"]
+
+#RUN pip install --upgrade pip
+#RUN pip install --no-cache-dir xtop-cli==1.0.7
+
+
+CMD ["xtop"]

@@ -167,11 +167,9 @@ async def aio_print_screen(args):
 
                 left_group = Group(
                     basic_resources_table,
-                    Rule(characters=" "),
-                    Align.left("\r\nFPS (Left) vs System Resource (Right)", style=TITLE_STYLE),
+                    Align.left("FPS (Left) vs System Resource (Right)", style=TITLE_STYLE),
                     Text.from_ansi(await make_chart(current_width * 0.7)),
                     Rule(characters=" "),
-                    # Align.left("\r\nDocker Container Stats", style=TITLE_STYLE),
                     await docker_monitor.render_stats_table(),
                 )
 
@@ -189,11 +187,7 @@ async def aio_print_screen(args):
 
                 root_group = Group(
                     await render_top_header(),
-                    # Rule(style=BORDER_STYLE),
                     layout_table,
-                    # Rule(style=BORDER_STYLE),
-                    # Align.center(Text("Press 'q' to quit", style="bold red")),
-                    # Rule(style=BORDER_STYLE),
                 )
 
                 live.update(root_group)

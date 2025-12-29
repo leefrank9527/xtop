@@ -111,19 +111,6 @@ class ResourceStats:
 
 
 def create_kv_grid(title: str, rows: list) -> Table:
-    # grid = Table.grid(expand=True)
-    # title = Text(title, style=TITLE_STYLE),
-    # title_justify = "left",
-    grid = Table(
-        title=Text(f"\r\n{title}", style=TITLE_STYLE),
-        title_justify="left",
-        show_header=False,
-        box=box.ASCII,
-        expand=True,
-        show_lines=False,
-        header_style=HEADER_STYLE,
-        border_style=BORDER_STYLE
-    )
     grid = Table.grid(expand=True)
 
     grid.add_column(Text(title, style=TITLE_STYLE), justify="left", ratio=1)
