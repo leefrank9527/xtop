@@ -41,17 +41,17 @@ class ResourceItem:
 zero_item = ResourceItem(0, 0, 0)
 
 
-@dataclass
 class ResourceStats:
-    tstamp: float = 0
-    cpu_info: ResourceItem = zero_item
-    mem_info: ResourceItem = zero_item
-    disk_info: ResourceItem = zero_item
-    load_avg: tuple[float, float, float] = (0, 0, 0)
-    network_read: float = 0
-    network_write: float = 0
-    network_read_speed: float = 0
-    network_write_speed: float = 0
+    def __init__(self, tstamp=0):
+        self.tstamp: float = 0
+        self.cpu_info: ResourceItem = zero_item
+        self.mem_info: ResourceItem = zero_item
+        self.disk_info: ResourceItem = zero_item
+        self.load_avg: tuple[float, float, float] = (0, 0, 0)
+        self.network_read: float = 0
+        self.network_write: float = 0
+        self.network_read_speed: float = 0
+        self.network_write_speed: float = 0
 
     @property
     def cpu_str(self) -> str:

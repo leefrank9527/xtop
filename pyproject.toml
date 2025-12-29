@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "xtop-cli"
-version = "1.0.7"
+version = "1.0.8"
 description = "A lightweight monitor for FPS, System Usage and Docker Stats"
 readme = "README.md"
 license-files = ["LICENSE"]
@@ -27,3 +27,4 @@ dependencies = [
 
 [project.scripts]
 xtop = "xtop.cli:main"
+xtop-docker = "xtop.cli:run_docker"

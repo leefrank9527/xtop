@@ -1,5 +1,4 @@
 import time
-from dataclasses import dataclass
 
 import aiohttp
 import asyncio
@@ -11,13 +10,14 @@ from rich.text import Text
 from monitor import HEADER_STYLE, ResourceStats, ResourceItem, format_bytes, format_net_speed, create_table
 
 
-@dataclass
 class DockerContainerResourceStats(ResourceStats):
-    id: str = ""
-    name: str = ""
-    blk_read: int = 0
-    blk_write: int = 0
-    pids: int = 0
+    def __init__(self, tstamp: float = 0, id: str = "", name: str = ""):
+        super().__init__(tstamp=tstamp)
+        self.id: str = id
+        self.name: str = name
+        self.blk_read: int = 0
+        self.blk_write: int = 0
+        self.pids: int = 0
 
     @property
     def block_io_str(self) -> str:

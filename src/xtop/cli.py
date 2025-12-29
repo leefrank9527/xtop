@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import subprocess
 
 from monitor.aio_watch_screen import aio_print_screen
 
@@ -30,3 +31,31 @@ def main():
         asyncio.run(_main())
     except KeyboardInterrupt:
         pass
+
+
+def run_docker():
+    args = _parse_args()
+    docker_name = "xtop"
+    server_url = args.server_url
+    docker_image_name = "cool/xtop"
+
+    run_cmd = [
+        "docker", "run", "-it", "--restart", "unless-stopped",
+        "--name", docker_name,
+        "--privileged",
+        "-e", f"SERVER_URL={server_url}",
+        "-v", "/dev/bus/usb:/dev/bus/usb",
+        "-v", "/dev/dri:/dev/dri",
+        "-v", "/etc/localtime:/etc/localtime",
+        "-v", "/var/run/docker.sock:/var/run/docker.sock",
+        f"{docker_image_name}:latest",
+    ]
+
+    stop_cmd = ["docker", "stop", docker_name]
+    rm_cmd = ["docker", "rm", docker_name]
+
+    try:
+        subprocess.run(run_cmd, check=True)
+    finally:
+        subprocess.run(stop_cmd, check=False)
+        subprocess.run(rm_cmd, check=False)
