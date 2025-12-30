@@ -5,6 +5,16 @@ import subprocess
 from monitor.aio_watch_screen import aio_print_screen
 
 
+def get_version():
+    try:
+        from importlib.metadata import version
+        __version__ = version("xtop-cli")
+    except Exception:
+        __version__ = "0.0.0"
+
+    return __version__
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="xtop")
 
@@ -37,7 +47,7 @@ def run_docker():
     args = _parse_args()
     docker_name = "xtop"
     server_url = args.server_url
-    docker_image_name = "cool/xtop"
+    docker_image_name = "leefrank9527/xtop-docker"
 
     run_cmd = [
         "docker", "run", "-it", "--restart", "unless-stopped",
@@ -48,7 +58,7 @@ def run_docker():
         "-v", "/dev/dri:/dev/dri",
         "-v", "/etc/localtime:/etc/localtime",
         "-v", "/var/run/docker.sock:/var/run/docker.sock",
-        f"{docker_image_name}:latest",
+        f"{docker_image_name}:{get_version()}",
     ]
 
     stop_cmd = ["docker", "stop", docker_name]
